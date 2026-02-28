@@ -5,13 +5,22 @@ import { ContractAnalysis } from '../../domain/contract/entities/contract-analys
 @Injectable()
 export class InMemoryAnalysisRepository extends AnalysisRepositoryPort {
   private readonly store = new Map<string, AnalysisRecord>();
+  private readonly hashIndex = new Map<string, string>(); // contentHash → analysisId
 
   save(record: AnalysisRecord): void {
     this.store.set(record.analysis.id, record);
+    if (record.analysis.contentHash) {
+      this.hashIndex.set(record.analysis.contentHash, record.analysis.id);
+    }
   }
 
   findById(id: string): AnalysisRecord | undefined {
     return this.store.get(id);
+  }
+
+  findByContentHash(hash: string): AnalysisRecord | undefined {
+    const id = this.hashIndex.get(hash);
+    return id ? this.store.get(id) : undefined;
   }
 
   update(id: string, partial: Partial<ContractAnalysis>): void {
