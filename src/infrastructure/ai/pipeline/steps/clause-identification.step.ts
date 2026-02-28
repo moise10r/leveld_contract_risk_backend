@@ -59,6 +59,7 @@ export class ClauseIdentificationStep {
     for (const result of results) {
       if (result.status === 'fulfilled') {
         for (const clause of result.value) {
+          // Deduplicate by normalised text fingerprint
           const fingerprint = clause.text.trim().slice(0, 120).toLowerCase();
           if (!seenTexts.has(fingerprint)) {
             seenTexts.add(fingerprint);
@@ -70,7 +71,18 @@ export class ClauseIdentificationStep {
       }
     }
 
-    return clauses;
+    // Ensure globally unique IDs after cross-chunk deduplication
+    const seenIds = new Set<string>();
+    return clauses.map((clause) => {
+      if (!seenIds.has(clause.id)) {
+        seenIds.add(clause.id);
+        return clause;
+      }
+      let uniqueId = `${clause.id}_${seenIds.size}`;
+      while (seenIds.has(uniqueId)) uniqueId += '_';
+      seenIds.add(uniqueId);
+      return { ...clause, id: uniqueId };
+    });
   }
 
   private async processChunk(chunk: TextChunk, totalChunks: number): Promise<IdentifiedClause[]> {
