@@ -10,6 +10,13 @@ export const SEVERITY_WEIGHTS: Record<RiskSeverity, number> = {
   [RiskSeverity.LOW]: 1,
 };
 
+export function normaliseSeverity(raw: string): RiskSeverity {
+  const upper = (raw ?? '').toUpperCase();
+  if (upper === RiskSeverity.HIGH) return RiskSeverity.HIGH;
+  if (upper === RiskSeverity.MEDIUM) return RiskSeverity.MEDIUM;
+  return RiskSeverity.LOW;
+}
+
 export function computeOverallSeverity(severities: RiskSeverity[]): RiskSeverity {
   if (severities.length === 0) return RiskSeverity.LOW;
 
