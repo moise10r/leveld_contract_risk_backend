@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Subject } from 'rxjs';
 import { v4 as uuid } from 'uuid';
@@ -23,10 +24,22 @@ export class AnalyzeContractUseCase {
   async submit(
     input: { text?: string; file?: Express.Multer.File; fileName?: string },
   ): Promise<SubmitResult> {
-    const analysisId = uuid();
     const fileName = input.file?.originalname ?? input.fileName ?? 'contract.txt';
 
-    const analysis = createContractAnalysis(analysisId, fileName);
+    // Compute a content hash to deduplicate identical documents
+    const contentHash = createHash('sha256')
+      .update(input.file ? input.file.buffer : Buffer.from(input.text ?? ''))
+      .digest('hex');
+
+    // Return the existing analysisId if the same document was already submitted
+    const existing = this.repository.findByContentHash(contentHash);
+    if (existing && existing.analysis.status !== 'failed') {
+      this.logger.log(`Cache hit for content hash ${contentHash.slice(0, 8)}… — returning existing analysis ${existing.analysis.id}`);
+      return { analysisId: existing.analysis.id };
+    }
+
+    const analysisId = uuid();
+    const analysis = createContractAnalysis(analysisId, fileName, contentHash);
     const subject = new Subject<PipelineProgressEvent>();
 
     this.repository.save({ analysis, subject });
