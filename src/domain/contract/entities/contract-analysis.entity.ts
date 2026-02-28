@@ -16,6 +16,7 @@ export interface ContractAnalysis {
   id: string;
   status: AnalysisStatus;
   fileName: string;
+  contentHash?: string;
   createdAt: Date;
   completedAt?: Date;
   clauses: RiskClause[];
@@ -23,11 +24,12 @@ export interface ContractAnalysis {
   error?: string;
 }
 
-export function createContractAnalysis(id: string, fileName: string): ContractAnalysis {
+export function createContractAnalysis(id: string, fileName: string, contentHash?: string): ContractAnalysis {
   return {
     id,
     status: 'pending',
     fileName,
+    contentHash,
     createdAt: new Date(),
     clauses: [],
   };
