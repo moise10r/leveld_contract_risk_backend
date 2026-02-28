@@ -6,16 +6,13 @@ import {
   HttpStatus,
   Param,
   Post,
-  Res,
   Sse,
   UploadedFile,
   UseInterceptors,
-  NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Observable, fromEvent, merge, of } from 'rxjs';
-import { map, takeUntil } from 'rxjs/operators';
-import { Response } from 'express';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { AnalyzeContractUseCase } from '../../application/use-cases/analyze-contract.use-case';
 
 @Controller('contract')
@@ -26,7 +23,7 @@ export class ContractController {
   @HttpCode(HttpStatus.ACCEPTED)
   @UseInterceptors(
     FileInterceptor('file', {
-      limits: { fileSize: 20 * 1024 * 1024 },
+      limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
       fileFilter: (_req, file, cb) => {
         if (file.mimetype !== 'application/pdf') {
           return cb(new Error('Only PDF files are accepted'), false);
