@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -38,7 +39,7 @@ export class ContractController {
     @Body('fileName') fileName: string | undefined,
   ) {
     if (!file && !text?.trim()) {
-      return { error: 'Provide either a PDF file or contract text' };
+      throw new BadRequestException('Provide either a PDF file or contract text');
     }
 
     const { analysisId } = await this.analyzeUseCase.submit({ file, text, fileName });
