@@ -1,4 +1,4 @@
-# Leveld — Contract Risk API
+# Leveld  Contract Risk API
 
 NestJS backend built with Domain-Driven Design (DDD) that runs a multi-step AI pipeline to extract, score, and explain risk clauses from contract documents. Accepts a PDF or raw text, streams real-time progress over SSE, and returns structured risk data.
 
@@ -39,66 +39,13 @@ The API is now running at **http://localhost:3001**.
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | Yes | — | Anthropic API key |
-| `PORT` | No | `3001` | HTTP port |
-| `FRONTEND_URL` | No | `http://localhost:3000` | Allowed CORS origin |
-| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-6` | Override the Claude model |
+All variables are documented in `.env.example`.
 
 ---
 
 ## API Endpoints
 
-### `POST /contract/analyze`
-Submit a contract for analysis. Returns an `analysisId`.
-
-**Multipart form — PDF upload:**
-```
-file: <PDF file>   (max 20 MB)
-```
-
-**Multipart form — paste text:**
-```
-text: <contract text>
-fileName: my-contract.txt
-```
-
-**Response:**
-```json
-{ "analysisId": "uuid" }
-```
-
----
-
-### `GET /contract/analysis/:id/stream`
-Server-Sent Events stream. Connect immediately after receiving `analysisId`.
-
-**Progress event:**
-```json
-{
-  "event": "progress",
-  "stage": "scoring",
-  "progress": 60,
-  "message": "Scoring clause risks..."
-}
-```
-
-**Complete event:**
-```json
-{
-  "event": "complete",
-  "stage": "complete",
-  "progress": 100,
-  "message": "Analysis complete",
-  "data": { ...ContractAnalysis }
-}
-```
-
----
-
-### `GET /contract/analysis/:id`
-Fetch the final result directly (useful as SSE fallback).
+Swagger UI is available at **http://localhost:3001/api** once the server is running.
 
 ---
 
