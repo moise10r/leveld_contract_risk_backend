@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AnthropicClient } from '../../anthropic.client';
+import { AiClientPort } from '../../ai-client.port';
 import {
   SYSTEM_CLAUSE_IDENTIFIER,
   buildClauseIdentificationPrompt,
@@ -27,7 +27,7 @@ interface RawClauseResponse {
 export class ClauseIdentificationStep {
   private readonly logger = new Logger(ClauseIdentificationStep.name);
 
-  constructor(private readonly ai: AnthropicClient) {}
+  constructor(private readonly ai: AiClientPort) {}
 
   async execute(chunks: TextChunk[]): Promise<IdentifiedClause[]> {
     const results = await Promise.allSettled(
