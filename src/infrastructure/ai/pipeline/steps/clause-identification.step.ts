@@ -23,6 +23,25 @@ interface RawClauseResponse {
   location: string;
 }
 
+const CLAUSE_TYPE_MAP: Record<string, ClauseType> = {
+  liability: ClauseType.LIABILITY,
+  ip: ClauseType.INTELLECTUAL_PROPERTY,
+  'intellectual property': ClauseType.INTELLECTUAL_PROPERTY,
+  termination: ClauseType.TERMINATION,
+  payment: ClauseType.PAYMENT,
+  'change-control': ClauseType.CHANGE_CONTROL,
+  'change control': ClauseType.CHANGE_CONTROL,
+  confidentiality: ClauseType.CONFIDENTIALITY,
+  indemnification: ClauseType.INDEMNIFICATION,
+  warranty: ClauseType.WARRANTY,
+  'dispute-resolution': ClauseType.DISPUTE_RESOLUTION,
+  'dispute resolution': ClauseType.DISPUTE_RESOLUTION,
+  'governing-law': ClauseType.GOVERNING_LAW,
+  'governing law': ClauseType.GOVERNING_LAW,
+  'force-majeure': ClauseType.FORCE_MAJEURE,
+  'force majeure': ClauseType.FORCE_MAJEURE,
+};
+
 @Injectable()
 export class ClauseIdentificationStep {
   private readonly logger = new Logger(ClauseIdentificationStep.name);
@@ -73,24 +92,6 @@ export class ClauseIdentificationStep {
   }
 
   private normaliseType(raw: string): ClauseType {
-    const map: Record<string, ClauseType> = {
-      liability: ClauseType.LIABILITY,
-      ip: ClauseType.INTELLECTUAL_PROPERTY,
-      'intellectual property': ClauseType.INTELLECTUAL_PROPERTY,
-      termination: ClauseType.TERMINATION,
-      payment: ClauseType.PAYMENT,
-      'change-control': ClauseType.CHANGE_CONTROL,
-      'change control': ClauseType.CHANGE_CONTROL,
-      confidentiality: ClauseType.CONFIDENTIALITY,
-      indemnification: ClauseType.INDEMNIFICATION,
-      warranty: ClauseType.WARRANTY,
-      'dispute-resolution': ClauseType.DISPUTE_RESOLUTION,
-      'dispute resolution': ClauseType.DISPUTE_RESOLUTION,
-      'governing-law': ClauseType.GOVERNING_LAW,
-      'governing law': ClauseType.GOVERNING_LAW,
-      'force-majeure': ClauseType.FORCE_MAJEURE,
-      'force majeure': ClauseType.FORCE_MAJEURE,
-    };
-    return map[raw.toLowerCase()] ?? ClauseType.OTHER;
+    return CLAUSE_TYPE_MAP[raw.toLowerCase()] ?? ClauseType.OTHER;
   }
 }
