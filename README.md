@@ -1,6 +1,8 @@
 # Leveld — Contract Risk API
 
-NestJS backend that runs an AI pipeline to extract, score, and explain risk clauses from contract documents. Accepts a PDF or raw text, streams real-time progress over SSE, and returns structured risk data.
+NestJS backend built with Domain-Driven Design (DDD) that runs a multi-step AI pipeline to extract, score, and explain risk clauses from contract documents. Accepts a PDF or raw text, streams real-time progress over SSE, and returns structured risk data.
+
+Currently powered by **Anthropic Claude**, with the AI layer built behind a provider interface so swapping to another model requires minimal changes.
 
 ---
 
@@ -11,7 +13,7 @@ NestJS backend that runs an AI pipeline to extract, score, and explain risk clau
 | Node.js | 18 or later |
 | npm | 9 or later |
 
-Get your **Anthropic API key** at [console.anthropic.com](https://console.anthropic.com) — the pipeline runs on Claude Sonnet.
+Get an **Anthropic API key** at [console.anthropic.com](https://console.anthropic.com).
 
 ---
 
@@ -42,10 +44,7 @@ The API is now running at **http://localhost:3001**.
 | `ANTHROPIC_API_KEY` | Yes | — | Anthropic API key |
 | `PORT` | No | `3001` | HTTP port |
 | `FRONTEND_URL` | No | `http://localhost:3000` | Allowed CORS origin |
-| `AI_PROVIDER` | No | `anthropic` | AI provider (`anthropic` or `openai`) |
-| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-6` | Override the Anthropic model |
-| `OPENAI_API_KEY` | Only if `AI_PROVIDER=openai` | — | OpenAI API key |
-| `OPENAI_MODEL` | No | `gpt-4o` | Override the OpenAI model |
+| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-6` | Override the Claude model |
 
 ---
 
@@ -221,15 +220,18 @@ src/infrastructure/ai/pipeline/
 
 ---
 
-## Adding a New AI Provider
+## Swapping the AI Model
 
-The AI client is injected via `AiClientPort` (abstract class in `src/infrastructure/ai/ai-client.port.ts`). To add a new provider:
+The AI client sits behind `AiClientPort` (`src/infrastructure/ai/ai-client.port.ts`), an abstract class used as the NestJS DI token. The pipeline steps never import a concrete client — they only depend on that interface.
+
+To plug in a different model or provider:
 
 1. Create `src/infrastructure/ai/your-provider.client.ts` extending `AiClientPort`
 2. Implement `complete(systemPrompt, userPrompt): Promise<string>`
-3. Implement `parseJsonResponse<T>(raw): T` (or delegate to `json-parser.util.ts`)
-4. Add a `case` for it in `ai-client.factory.ts`
-5. Set `AI_PROVIDER=your-provider` in `.env`
+3. Implement `parseJsonResponse<T>(raw): T` (or reuse `json-parser.util.ts`)
+4. Register it in `ai-client.factory.ts` and wire it up in `contract.module.ts`
+
+Nothing else in the codebase needs to change.
 
 ---
 
