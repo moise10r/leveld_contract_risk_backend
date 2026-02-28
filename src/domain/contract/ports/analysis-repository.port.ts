@@ -19,5 +19,6 @@ export interface AnalysisRecord {
 export abstract class AnalysisRepositoryPort {
   abstract save(record: AnalysisRecord): void;
   abstract findById(id: string): AnalysisRecord | undefined;
+  abstract findByContentHash(hash: string): AnalysisRecord | undefined;
   abstract update(id: string, partial: Partial<ContractAnalysis>): void;
 }
