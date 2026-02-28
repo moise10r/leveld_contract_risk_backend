@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { AnthropicClient } from '../../anthropic.client';
+import { AiClientPort } from '../../ai-client.port';
 import { SYSTEM_SUMMARISER, buildSummaryPrompt } from '../../prompts';
 import { AnalysedClause } from './recommendation.step';
 import { ContractSummary, SignalRecommendation } from '../../../../domain/contract/entities/contract-analysis.entity';
-import { RiskSeverity, computeOverallSeverity } from '../../../../domain/contract/value-objects/risk-severity.vo';
+import { RiskSeverity, normaliseSeverity } from '../../../../domain/contract/value-objects/risk-severity.vo';
 
 interface SummaryResponse {
   overallRisk: string;
@@ -15,7 +15,7 @@ interface SummaryResponse {
 
 @Injectable()
 export class SummaryStep {
-  constructor(private readonly ai: AnthropicClient) {}
+  constructor(private readonly ai: AiClientPort) {}
 
   async execute(clauses: AnalysedClause[]): Promise<ContractSummary> {
     if (clauses.length === 0) {
@@ -35,7 +35,7 @@ export class SummaryStep {
     const parsed = this.ai.parseJsonResponse<SummaryResponse>(raw);
 
     return {
-      overallRisk: this.normaliseSeverity(parsed.overallRisk),
+      overallRisk: normaliseSeverity(parsed.overallRisk),
       executiveSummary: parsed.executiveSummary ?? '',
       keyThemes: Array.isArray(parsed.keyThemes) ? parsed.keyThemes : [],
       criticalItems: Array.isArray(parsed.criticalItems) ? parsed.criticalItems : [],
@@ -59,12 +59,5 @@ export class SummaryStep {
       return upper as SignalRecommendation;
     }
     return 'REVIEW';
-  }
-
-  private normaliseSeverity(raw: string): RiskSeverity {
-    const upper = (raw ?? '').toUpperCase();
-    if (upper === RiskSeverity.HIGH) return RiskSeverity.HIGH;
-    if (upper === RiskSeverity.MEDIUM) return RiskSeverity.MEDIUM;
-    return RiskSeverity.LOW;
   }
 }

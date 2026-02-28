@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AnthropicClient } from '../../anthropic.client';
+import { AiClientPort } from '../../ai-client.port';
+import { batch } from '../../batch.util';
 import { SYSTEM_RECOMMENDATION_ADVISOR, buildRecommendationPrompt } from '../../prompts';
 import { ScoredClause } from './risk-scoring.step';
 
@@ -18,10 +19,10 @@ const BATCH_SIZE = 4;
 export class RecommendationStep {
   private readonly logger = new Logger(RecommendationStep.name);
 
-  constructor(private readonly ai: AnthropicClient) {}
+  constructor(private readonly ai: AiClientPort) {}
 
   async execute(clauses: ScoredClause[]): Promise<AnalysedClause[]> {
-    const batches = this.batch(clauses, BATCH_SIZE);
+    const batches = batch(clauses, BATCH_SIZE);
     const recsMap = new Map<string, string>();
 
     const results = await Promise.allSettled(
@@ -45,7 +46,9 @@ export class RecommendationStep {
     }));
   }
 
-  private async processBatch(clauses: ScoredClause[]): Promise<RecommendationResponse[]> {
+  private async processBatch(
+    clauses: ScoredClause[],
+  ): Promise<RecommendationResponse[]> {
     const input = clauses.map((c) => ({
       id: c.id,
       title: c.title,
@@ -62,11 +65,4 @@ export class RecommendationStep {
     return Array.isArray(parsed) ? parsed : [];
   }
 
-  private batch<T>(items: T[], size: number): T[][] {
-    const batches: T[][] = [];
-    for (let i = 0; i < items.length; i += size) {
-      batches.push(items.slice(i, i + size));
-    }
-    return batches;
-  }
 }
