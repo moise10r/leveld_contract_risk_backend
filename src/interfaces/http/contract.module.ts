@@ -7,7 +7,7 @@ import { ClauseIdentificationStep } from '../../infrastructure/ai/pipeline/steps
 import { RiskScoringStep } from '../../infrastructure/ai/pipeline/steps/risk-scoring.step';
 import { RecommendationStep } from '../../infrastructure/ai/pipeline/steps/recommendation.step';
 import { SummaryStep } from '../../infrastructure/ai/pipeline/steps/summary.step';
-import { AnthropicClient } from '../../infrastructure/ai/anthropic.client';
+import { aiClientProvider } from '../../infrastructure/ai/ai-client.factory';
 import { PdfParserAdapter } from '../../infrastructure/pdf/pdf-parser.adapter';
 import { InMemoryAnalysisRepository } from '../../infrastructure/persistence/in-memory-analysis.repository';
 import { AnalysisRepositoryPort } from '../../domain/contract/ports/analysis-repository.port';
@@ -22,7 +22,7 @@ import { AnalysisRepositoryPort } from '../../domain/contract/ports/analysis-rep
     RiskScoringStep,
     RecommendationStep,
     SummaryStep,
-    AnthropicClient,
+    aiClientProvider,
     PdfParserAdapter,
     { provide: AnalysisRepositoryPort, useClass: InMemoryAnalysisRepository },
   ],
