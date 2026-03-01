@@ -12,7 +12,6 @@ Currently powered by **Anthropic Claude**, with the AI layer built behind a prov
 
 Get an **Anthropic API key** at [console.anthropic.com](https://console.anthropic.com).
 
----
 
 ## Quick Start
 
@@ -32,13 +31,11 @@ npm run start:dev
 
 The API is now running at **http://localhost:3001**.
 
----
 
 ## Environment Variables
 
 All variables are documented in `.env.example`.
 
----
 
 ## API Endpoints
 
@@ -98,7 +95,6 @@ src/
     └── contract.module.ts           # Wires all providers together
 ```
 
----
 
 ## The AI Pipeline
 
