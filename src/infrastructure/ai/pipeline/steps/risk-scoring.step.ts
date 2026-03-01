@@ -28,31 +28,33 @@ export class RiskScoringStep {
 
   async execute(clauses: IdentifiedClause[]): Promise<ScoredClause[]> {
     const batches = batch(clauses, BATCH_SIZE);
-    const scoredMap = new Map<string, ScoreResponse>();
+    const results = await Promise.allSettled(batches.map((b) => this.scoreClausesBatch(b)));
+    return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+  }
 
-    const batchResults = await Promise.allSettled(
-      batches.map((b) => this.scoreBatch(b)),
-    );
-
-    for (const result of batchResults) {
-      if (result.status === 'fulfilled') {
-        for (const score of result.value) {
-          scoredMap.set(score.id, score);
-        }
-      } else {
-        this.logger.warn(`Scoring batch failed: ${result.reason}`);
-      }
-    }
-
-    return clauses.map((clause) => {
-      const score = scoredMap.get(clause.id);
-      return {
+  /** Score a single batch and map raw AI responses onto ScoredClause objects. */
+  async scoreClausesBatch(clauses: IdentifiedClause[]): Promise<ScoredClause[]> {
+    try {
+      const scores = await this.scoreBatch(clauses);
+      const scoredMap = new Map(scores.map((s) => [s.id, s]));
+      return clauses.map((clause) => {
+        const score = scoredMap.get(clause.id);
+        return {
+          ...clause,
+          severity: score ? normaliseSeverity(score.severity) : RiskSeverity.MEDIUM,
+          riskFactors: score?.riskFactors ?? [],
+          explanation: score?.explanation ?? 'Risk assessment unavailable for this clause.',
+        };
+      });
+    } catch (err) {
+      this.logger.warn(`Scoring batch failed: ${err}`);
+      return clauses.map((clause) => ({
         ...clause,
-        severity: score ? normaliseSeverity(score.severity) : RiskSeverity.MEDIUM,
-        riskFactors: score?.riskFactors ?? [],
-        explanation: score?.explanation ?? 'Risk assessment unavailable for this clause.',
-      };
-    });
+        severity: RiskSeverity.MEDIUM,
+        riskFactors: [],
+        explanation: 'Risk assessment unavailable for this clause.',
+      }));
+    }
   }
 
   private async scoreBatch(
@@ -71,5 +73,4 @@ export class RiskScoringStep {
 
     return Array.isArray(parsed) ? parsed : [];
   }
-
 }

@@ -3,12 +3,14 @@ import * as Sentry from '@sentry/node';
 import { Subject } from 'rxjs';
 import { ChunkingStep } from './steps/chunking.step';
 import { ClauseIdentificationStep } from './steps/clause-identification.step';
+import { IdentifiedClause } from './steps/clause-identification.step';
 import { RiskScoringStep } from './steps/risk-scoring.step';
-import { RecommendationStep } from './steps/recommendation.step';
+import { RecommendationStep, AnalysedClause } from './steps/recommendation.step';
 import { SummaryStep } from './steps/summary.step';
 import { ContractAnalysis } from '../../../domain/contract/entities/contract-analysis.entity';
 import { RiskClause } from '../../../domain/contract/entities/risk-clause.entity';
 import { RiskSeverity } from '../../../domain/contract/value-objects/risk-severity.vo';
+import { batch } from '../batch.util';
 // Import and re-export from domain to keep infrastructure aligned without circular deps
 import { PipelineProgressEvent } from '../../../domain/contract/ports/analysis-repository.port';
 export { PipelineProgressEvent };
@@ -18,6 +20,10 @@ export interface PipelineInput {
   analysisId: string;
   fileName: string;
 }
+
+// Score → recommend a batch of this size, then emit each clause immediately.
+// Keeps the two AI calls per batch balanced in token usage.
+const STREAMING_BATCH_SIZE = 4;
 
 @Injectable()
 export class ContractAnalysisPipeline {
@@ -51,16 +57,16 @@ export class ContractAnalysisPipeline {
       this.logger.log(`Identified ${identifiedClauses.length} clauses`);
 
       if (identifiedClauses.length === 0) {
-        return this.buildEmptyResult(input);
+        return this.buildEmptyResult(input, progress$);
       }
 
-      // Step 3: Score risk for each clause
+      // Steps 3+4: Score and recommend in parallel batches, streaming each finished
+      // clause to the client the moment its batch completes.
       emit('scoring', 50, `Assessing risk levels for ${identifiedClauses.length} clauses…`);
-      const scoredClauses = await this.riskScoringStep.execute(identifiedClauses);
-
-      // Step 4: Generate recommendations
-      emit('recommending', 70, 'Generating negotiation recommendations…');
-      const analysedClauses = await this.recommendationStep.execute(scoredClauses);
+      const analysedClauses = await this.scoreThenRecommendStreaming(
+        identifiedClauses,
+        progress$,
+      );
 
       // Step 5: Generate overall summary
       emit('summarising', 88, 'Creating executive risk summary…');
@@ -101,7 +107,53 @@ export class ContractAnalysisPipeline {
     }
   }
 
-  private buildEmptyResult(input: PipelineInput): ContractAnalysis {
+  /**
+   * Splits clauses into batches, then for each batch concurrently:
+   *   score → recommend → emit one `clause` SSE event per clause.
+   * Batches race in parallel so the fastest arrive on the client first.
+   */
+  private async scoreThenRecommendStreaming(
+    clauses: IdentifiedClause[],
+    progress$: Subject<PipelineProgressEvent>,
+  ): Promise<AnalysedClause[]> {
+    const batches = batch(clauses, STREAMING_BATCH_SIZE);
+    const allAnalysed: AnalysedClause[] = [];
+
+    await Promise.allSettled(
+      batches.map(async (scoringBatch) => {
+        const scored = await this.riskScoringStep.scoreClausesBatch(scoringBatch);
+        const analysed = await this.recommendationStep.recommendClausesBatch(scored);
+
+        for (const clause of analysed) {
+          allAnalysed.push(clause);
+          progress$.next({
+            event: 'clause',
+            stage: 'scoring',
+            progress: 50,
+            message: clause.title,
+            clause: {
+              id: clause.id,
+              title: clause.title,
+              type: clause.type,
+              text: clause.text,
+              location: clause.location,
+              severity: clause.severity,
+              riskFactors: clause.riskFactors,
+              explanation: clause.explanation,
+              recommendation: clause.recommendation,
+            },
+          });
+        }
+      }),
+    );
+
+    return allAnalysed;
+  }
+
+  private buildEmptyResult(
+    input: PipelineInput,
+    progress$: Subject<PipelineProgressEvent>,
+  ): ContractAnalysis {
     const result: ContractAnalysis = {
       id: input.analysisId,
       status: 'complete',
@@ -117,6 +169,9 @@ export class ContractAnalysisPipeline {
         signalRecommendation: 'REVIEW',
       },
     };
+
+    progress$.next({ event: 'complete', stage: 'complete', progress: 100, message: 'Analysis complete', data: result });
+    progress$.complete();
 
     return result;
   }

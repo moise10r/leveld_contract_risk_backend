@@ -23,27 +23,27 @@ export class RecommendationStep {
 
   async execute(clauses: ScoredClause[]): Promise<AnalysedClause[]> {
     const batches = batch(clauses, BATCH_SIZE);
-    const recsMap = new Map<string, string>();
+    const results = await Promise.allSettled(batches.map((b) => this.recommendClausesBatch(b)));
+    return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
+  }
 
-    const results = await Promise.allSettled(
-      batches.map((b) => this.processBatch(b)),
-    );
-
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        for (const r of result.value) {
-          recsMap.set(r.id, r.recommendation);
-        }
-      } else {
-        this.logger.warn(`Recommendation batch failed: ${result.reason}`);
-      }
+  /** Recommend a single batch and map raw AI responses onto AnalysedClause objects. */
+  async recommendClausesBatch(clauses: ScoredClause[]): Promise<AnalysedClause[]> {
+    try {
+      const recs = await this.processBatch(clauses);
+      const recsMap = new Map(recs.map((r) => [r.id, r.recommendation]));
+      return clauses.map((clause) => ({
+        ...clause,
+        recommendation:
+          recsMap.get(clause.id) ?? 'Seek legal advice before accepting this clause.',
+      }));
+    } catch (err) {
+      this.logger.warn(`Recommendation batch failed: ${err}`);
+      return clauses.map((clause) => ({
+        ...clause,
+        recommendation: 'Seek legal advice before accepting this clause.',
+      }));
     }
-
-    return clauses.map((clause) => ({
-      ...clause,
-      recommendation:
-        recsMap.get(clause.id) ?? 'Seek legal advice before accepting this clause.',
-    }));
   }
 
   private async processBatch(
@@ -64,5 +64,4 @@ export class RecommendationStep {
 
     return Array.isArray(parsed) ? parsed : [];
   }
-
 }

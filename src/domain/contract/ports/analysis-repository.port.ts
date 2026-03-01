@@ -1,12 +1,14 @@
 import { Subject } from 'rxjs';
 import { ContractAnalysis } from '../entities/contract-analysis.entity';
+import { RiskClause } from '../entities/risk-clause.entity';
 
 // Defined in the domain layer to prevent domain → infrastructure circular dependency
 export interface PipelineProgressEvent {
-  event: 'progress' | 'complete' | 'error';
+  event: 'progress' | 'clause' | 'complete' | 'error';
   stage: string;
   progress: number;
   message: string;
+  clause?: RiskClause;
   data?: ContractAnalysis;
   error?: string;
 }

@@ -29,7 +29,7 @@ export class PdfParserAdapter {
 
   private postProcess(raw: string): string {
     return raw
-      .replace(/\f/g, '\n\n')                    // form feeds → paragraph breaks
+      .replace(/\f/g, '\n\n')                    // form feeds to paragraph breaks
       .replace(/(\w)-\n(\w)/g, '$1$2')           // rejoin hyphenated line breaks
       .replace(/(?<!\n)\n(?!\n)(?![•\-\d])/g, ' ') // join soft-wrapped lines (not lists)
       .replace(/\n{3,}/g, '\n\n')                // collapse excess blank lines
