@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as Sentry from '@sentry/node';
 import { Subject } from 'rxjs';
 import { ChunkingStep } from './steps/chunking.step';
 import { ClauseIdentificationStep } from './steps/clause-identification.step';
@@ -93,6 +94,7 @@ export class ContractAnalysisPipeline {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown pipeline error';
       this.logger.error(`Pipeline failed: ${message}`);
+      Sentry.captureException(error);
       progress$.next({ event: 'error', stage: 'error', progress: 0, message, error: message });
       progress$.complete();
       throw error;

@@ -21,12 +21,21 @@ export class AnthropicClient extends AiClientPort {
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       try {
-        const response = await this.client.messages.create({
-          model: this.model,
-          max_tokens: 8192,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
-        });
+        const response = await this.client.messages.create(
+          {
+            model: this.model,
+            max_tokens: 4096,
+            temperature: 0,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
+          },
+          { signal: AbortSignal.timeout(30_000) },
+        );
+
+        const { input_tokens, output_tokens } = response.usage;
+        this.logger.log(
+          `AI call complete — model=${this.model} in=${input_tokens} out=${output_tokens} total=${input_tokens + output_tokens}`,
+        );
 
         const content = response.content[0];
         if (content.type !== 'text') {

@@ -5,6 +5,10 @@ export class PdfParserAdapter {
   private readonly logger = new Logger(PdfParserAdapter.name);
 
   async extractText(buffer: Buffer): Promise<string> {
+    if (!buffer.subarray(0, 4).equals(Buffer.from('%PDF'))) {
+      throw new Error('File is not a valid PDF');
+    }
+
     try {
       // Dynamic import to avoid issues with pdf-parse native bindings
       const pdfParse = await import('pdf-parse');
