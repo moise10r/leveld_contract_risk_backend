@@ -76,16 +76,25 @@ export class ChunkingStep {
     return sections;
   }
 
+  private splitParagraphByWords(para: string): string[] {
+    const words = para.split(/\s+/).filter(Boolean);
+    const parts: string[] = [];
+    for (let i = 0; i < words.length; i += MAX_CHUNK_WORDS) {
+      parts.push(words.slice(i, i + MAX_CHUNK_WORDS).join(' '));
+    }
+    return parts;
+  }
+
   private buildChunks(sections: string[][]): TextChunk[] {
     const chunks: TextChunk[] = [];
     let buffer: string[] = [];
     let bufferWords = 0;
     let lastSentences: string[] = [];
 
-    const flush = () => {
+    const flush = (final = false) => {
       if (buffer.length === 0) return;
       const text = buffer.join('\n\n');
-      if (countWords(text) >= MIN_CHUNK_WORDS) {
+      if (final || countWords(text) >= MIN_CHUNK_WORDS) {
         chunks.push({ index: chunks.length, text, wordCount: countWords(text) });
       }
       // Keep last N sentences for overlap context
@@ -109,14 +118,24 @@ export class ChunkingStep {
       }
 
       if (sectionWords > MAX_CHUNK_WORDS) {
-        // Section itself is too large — split by paragraph
+        // Section itself is too large  split by paragraph, then by words if needed
         for (const para of section) {
           const paraWords = countWords(para);
-          if (bufferWords + paraWords > MAX_CHUNK_WORDS && bufferWords > 0) {
-            flush();
+          if (paraWords > MAX_CHUNK_WORDS) {
+            // Paragraph has no breaks  word-split it
+            if (bufferWords > 0) flush();
+            for (const part of this.splitParagraphByWords(para)) {
+              buffer.push(part);
+              bufferWords += countWords(part);
+              flush();
+            }
+          } else {
+            if (bufferWords + paraWords > MAX_CHUNK_WORDS && bufferWords > 0) {
+              flush();
+            }
+            buffer.push(para);
+            bufferWords += paraWords;
           }
-          buffer.push(para);
-          bufferWords += paraWords;
         }
       } else {
         buffer.push(...section);
@@ -124,7 +143,7 @@ export class ChunkingStep {
       }
     }
 
-    flush();
+    flush(true);
     return chunks;
   }
 }
