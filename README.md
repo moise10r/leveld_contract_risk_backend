@@ -1,4 +1,4 @@
-# Leveld  Contract Risk API
+# Leveld  Contract Risk API.
 
 NestJS backend built with Domain-Driven Design (DDD) that runs a multi-step AI pipeline to extract, score, and explain risk clauses from contract documents. Accepts a PDF or raw text, streams real-time progress over SSE, and returns structured risk data.
 
